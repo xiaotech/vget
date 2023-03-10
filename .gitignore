@@ -1,0 +1,17 @@
+# runtime files
+out/
+venv/
+__pycache__/
+*.log
+
+# setup files
+dist/
+*.egg-info/
+build/
+
+# pyinstaller spec
+*.spec
+
+
+
+
