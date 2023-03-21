@@ -6,7 +6,7 @@ from em3u8.parse import Parse
 from em3u8.logger import Log
 
 warnings.simplefilter('ignore', InsecureRequestWarning)
-version = "0.4"
+version = "0.4.1"
 author = "xiaojun"
 author_email = "xiaotech@163.com"
 web_url = "https://github.com/xiaotech/vget"
