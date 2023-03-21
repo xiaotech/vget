@@ -7,6 +7,7 @@ import tempfile
 import random
 import string
 from typing import Optional,Tuple,List
+import re
 
 
 class MClient():
@@ -15,6 +16,8 @@ class MClient():
     '''
     def __init__(self,urls=[]) -> None:
         self.urls:List[str] = urls
+        self.__valid_ts_len = None
+        self.__valid_ts_pt = r'[^0-9]([0-9]+).ts'
 
     def __download_file(self,url:str,save_path:str,timeout=10,retry:int=3) -> Tuple[bool,Optional[Exception]]:
         """
@@ -141,12 +144,7 @@ class MClient():
                     ):f"{ts_temp_dir}/{os.path.basename(url)}" for url in self.urls}
                 wait(tasks,return_when=ALL_COMPLETED)
             # merge ts
-            with open(save_path,"wb") as ww:
-                for ts in tasks.values():
-                    if os.path.exists(ts):
-                        with open(ts,"rb") as rr:
-                            ww.write(rr.read())
-            logger.success(f"{os.path.abspath(save_path)} Done!!")
+            self.__merge_ts(save_path,tasks.values())
             return save_path
 
     def download_vedio(self,save_path:Optional[str]=None,workers:int=1,thread:bool=True,debug:bool=False) -> str:
@@ -177,7 +175,7 @@ class MClient():
     
         with tempfile.TemporaryDirectory() as ts_temp_dir:
             logger.debug(f"temdir: {ts_temp_dir}")
-            save_path = self.__init_output(save_path)      
+            save_path = self.__init_output(save_path)
             if thread:
                 executors = ThreadPoolExecutor(max_workers=workers)
             else:
@@ -198,11 +196,54 @@ class MClient():
             logger.debug(f"Total: {len(tasks)},FAIL: {failed_count},SUC: {len(tasks) - failed_count}")
             #merge ts
             logger.debug("start merge ts")
-            with open(save_path,"wb") as ww:
-                for ts in tasks.values():
-                    if os.path.exists(ts):
-                        with open(ts,"rb") as rr:
-                            ww.write(rr.read())
-            logger.success(f"{os.path.abspath(save_path)} Done!!")
+            self.__merge_ts(save_path,tasks.values())
             return save_path
+
+    def __merge_ts(self,save_path:str,temp_tss:List):
+        """
+        merge tss into one file
+        """
+        with open(save_path,"wb+") as ww:
+            for ts in temp_tss:
+                if self.__check_valid_ts(ts):
+                    with open(ts,"rb") as rr:
+                        ww.write(rr.read())
+        logger.success(f"{os.path.abspath(save_path)} Done!!")
+
+    def __check_valid_ts(self,ts_path):
+        """
+        ts file valid check
+        """
+        # check download ok
+        if not os.path.exists(ts_path):
+            return False
+        # get valid ts len
+        if not self.__valid_ts_len:
+            ts_len = {}
+            for ts in self.urls:
+                t_len = self.__get_ts_len(ts)
+                if ts_len.get(t_len,None):
+                    ts_len[t_len] += 1
+                else:
+                    ts_len[t_len] = 1
+            max = 0
+            max_len = 0
+            for k,v in ts_len.items():
+                if v > max:
+                    max_len = k
+                    max = v
+            self.__valid_ts_len = max_len
+        # return valid ts equal len
+        if self.__get_ts_len(ts_path) == self.__valid_ts_len:
+            return True
+        else:
+            return False
+
+    def __get_ts_len(self,ts_path):
+        data = re.findall(self.__valid_ts_pt,ts_path)
+        if not data:
+            return 0
+        return len(data[0])
+        
+        
             

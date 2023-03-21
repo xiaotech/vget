@@ -50,7 +50,7 @@ class Parse():
         try:
             if not self.__m3u8:
                 if self.__url.endswith(".m3u8"):
-                    self.__m3u8 = self.__url
+                    self.__m3u8 = [self.__url,]
                     self.__title = f"m3u8_{''.join(random.choices(string.ascii_letters+string.digits,k=10))}"
                 else:
                     self.__m3u8 = self.parser.m3u8
